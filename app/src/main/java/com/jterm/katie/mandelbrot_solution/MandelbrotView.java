@@ -36,8 +36,10 @@ public class MandelbrotView extends View {
 
     private double mXMin = X_MIN;
     private double mXMax = X_MAX;
+    private double mXRange = X_MAX - X_MIN;
     private double mYMin = Y_MIN;
     private double mYMax = Y_MAX;
+    private double mYRange = Y_MAX - Y_MIN;
 
     private Paint mBackgroundPaint;
     private Paint mPaint;
@@ -87,8 +89,10 @@ public class MandelbrotView extends View {
         mMaxDepth = depth;
         mXMin = X_MIN;
         mXMax = X_MAX;
+        mXRange = mXMax - mXMin;
         mYMin = Y_MIN;
         mYMax = Y_MAX;
+        mYRange = mYMax - mYMin;
         initializeColors();
         postInvalidate();
     }
@@ -110,9 +114,53 @@ public class MandelbrotView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         canvas.drawRect(0, 0, getWidth(), getHeight(), mBackgroundPaint);
+
+        // transform pixel to mandelbrot coordinate
+        // 600+ pixels but only 100 points => needs big dot size
+        int dotSize = getWidth()/mNumPoints;
+        for (int i = 0; i < mNumPoints; i++) {
+
+            double mx = ((i * 1.0)/mNumPoints) * mXRange + mXMin;
+            float px = ((i * 1.0f)/mNumPoints) * getWidth();
+
+            for (int j = 0; j < mNumPoints; j++) {
+
+                double my = ((j * 1.0)/mNumPoints) * mYRange + mYMin;
+                float py = ((j * 1.0f)/mNumPoints) * getHeight();
+
+                int color = getMandelbrotColor(mx, my);
+
+                mPaint.setColor(color);
+                canvas.drawCircle(px, py, dotSize, mPaint);
+            }
+        }
     }
 
+    /**
+     * Mandelbrot:
+     * Z_0 = (mX, mY)
+     * Z_n+1 = Z_n * Z_n + Z_0
+     * @param mX
+     * @param mY
+     * @return
+     */
     private int getMandelbrotColor(double mX, double mY) {
-        return mColors[0];
+        double zx = mX;
+        double zy = mY;
+        int iter = 0;
+
+        while (
+                iter < mMaxDepth &&
+                // check divergence: 4 is the size of each dimension of the plot
+                (zx*zx) + (zy*zy) < 4
+                ) {
+            // calculate Z_n+1
+            double tx = zx * zx - zy * zy + mX;
+            zy = 2 * zx * zy + mY;
+            zx = tx;
+            iter++;
+        }
+
+        return mColors[iter];
     }
 }
